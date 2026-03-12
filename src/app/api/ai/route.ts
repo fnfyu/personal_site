@@ -23,11 +23,16 @@ export async function POST(request: Request) {
       },
       signal: AbortSignal.timeout(9000), // 9秒超时保护
       body: JSON.stringify({
-        model: process.env.AI_MODEL || 'gpt-3.5-turbo',
-        messages: [
-          { role: 'system', content: '你是一个全能的个人助理，名字叫 HubAI。你知识渊博，幽默风趣，热爱游戏。' },
-          ...messages
-        ]
+        model: process.env.AI_MODEL || 'qwen-turbo',
+        input: {
+          messages: [
+            { role: 'system', content: '你是一个全能的个人助理，名字叫 HubAI。你知识渊博，幽默风趣，热爱游戏。' },
+            ...messages
+          ]
+        },
+        parameters: {
+          result_format: 'message'
+        }
       })
     });
 
@@ -41,7 +46,7 @@ export async function POST(request: Request) {
     }
 
     const data = await response.json();
-    return NextResponse.json({ response: data.choices[0].message.content });
+    return NextResponse.json({ response: data.output.choices[0].message.content });
   } catch (error) {
     return NextResponse.json({ error: 'AI Error', response: '抱歉，我的大脑出了一点小状况，请稍后再试。' }, { status: 500 });
   }

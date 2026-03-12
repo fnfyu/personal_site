@@ -8,8 +8,11 @@ export async function GET(request: Request) {
   const apiKey = process.env.STEAM_API_KEY;
 
   if (!apiKey || !steamId) {
+    console.error("Steam API call failed: Missing API Key or Steam ID in environment variables.");
     return NextResponse.json({ error: 'Missing API Key or Steam ID' }, { status: 400 });
   }
+
+  console.log(`Attempting Steam API call for steamId: ${steamId} with key ending in ...${apiKey.slice(-4)}`);
 
   try {
     const response = await fetch(

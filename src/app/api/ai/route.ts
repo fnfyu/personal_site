@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: Request) {
   const { messages } = await request.json();
   const apiKey = process.env.AI_API_KEY;
@@ -19,6 +21,7 @@ export async function POST(request: Request) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
+      signal: AbortSignal.timeout(9000), // 9秒超时保护
       body: JSON.stringify({
         model: process.env.AI_MODEL || 'gpt-3.5-turbo',
         messages: [
@@ -27,6 +30,15 @@ export async function POST(request: Request) {
         ]
       })
     });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return NextResponse.json({ 
+        error: 'AI 接口返回错误', 
+        response: `抱歉，AI 供应商返回了错误 (${response.status})。请检查 API Key 或中转地址。`,
+        details: errorData
+      }, { status: response.status });
+    }
 
     const data = await response.json();
     return NextResponse.json({ response: data.choices[0].message.content });

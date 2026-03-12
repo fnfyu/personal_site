@@ -10,6 +10,8 @@ export interface Game {
   notes: string;
   platform: 'steam' | 'epic' | 'other';
   last_played?: number;
+  screenshots?: string[]; // 截图列表
+  review?: string; // 详细评价
 }
 
 export interface SteamGame {

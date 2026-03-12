@@ -85,9 +85,42 @@ export default function GameLibrary() {
     }
   };
 
+  const [showDetailModal, setShowDetailModal] = useState<Game | null>(null);
+
+  // 当打开详情页且是 Steam 游戏时，尝试自动拉取该游戏的截图
+  useEffect(() => {
+    const fetchScreenshots = async () => {
+      if (showDetailModal && showDetailModal.platform === 'steam' && showDetailModal.appid) {
+        // 如果已经有截图了就不再重复拉取（除非想强制刷新）
+        if (showDetailModal.screenshots && showDetailModal.screenshots.length > 0) return;
+        
+        try {
+          const res = await fetch(`/api/steam/screenshots?appid=${showDetailModal.appid}`);
+          const data = await res.json();
+          if (data.screenshots && data.screenshots.length > 0) {
+            setShowDetailModal(prev => prev ? ({
+              ...prev,
+              screenshots: Array.from(new Set([...(prev.screenshots || []), ...data.screenshots]))
+            }) : null);
+          }
+        } catch (e) {
+          console.error("Failed to fetch Steam screenshots:", e);
+        }
+      }
+    };
+    
+    fetchScreenshots();
+  }, [showDetailModal?.id]);
+
+  const updateGame = (updatedGame: Game) => {
+    setGames(games.map(g => g.id === updatedGame.id ? updatedGame : g));
+    setShowDetailModal(null);
+  };
+
   const deleteGame = (id: string) => {
     if (confirm("确定要删除这个游戏吗？")) {
       setGames(games.filter(g => g.id !== id));
+      if (showDetailModal?.id === id) setShowDetailModal(null);
     }
   };
 
@@ -180,7 +213,7 @@ export default function GameLibrary() {
                   </div>
                 </div>
               </div>
-              <div className="p-3">
+              <div className="p-3 cursor-pointer" onClick={() => setShowDetailModal(game)}>
                 <h3 className="font-semibold text-sm truncate mb-1">{game.name}</h3>
                 <div className="flex items-center justify-between">
                   <div className="flex gap-0.5">
@@ -193,7 +226,7 @@ export default function GameLibrary() {
                     game.status === 'completed' ? 'bg-purple-500/20 text-purple-400' :
                     'bg-gray-500/20 text-gray-400'
                   }`}>
-                    {game.status === 'playing' ? '在玩' : game.status === 'completed' ? '已通' : '待玩'}
+                    {game.status === 'playing' ? '在玩' : game.status === 'completed' ? '玩过' : '待玩'}
                   </span>
                 </div>
               </div>
@@ -302,6 +335,150 @@ export default function GameLibrary() {
                   >
                     保存
                   </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+      {/* Detail Modal */}
+      <AnimatePresence>
+        {showDetailModal && (
+          <div className="fixed inset-0 bg-black/90 backdrop-blur-lg z-[120] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="bg-[#111] border border-white/10 rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+            >
+              <div className="relative h-64 md:h-80 w-full">
+                <Image 
+                  src={showDetailModal.cover} 
+                  alt={showDetailModal.name}
+                  fill
+                  className="object-cover opacity-40 blur-sm"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#111] to-transparent" />
+                <button 
+                  onClick={() => setShowDetailModal(null)}
+                  className="absolute top-6 right-6 p-2 bg-black/50 hover:bg-black/80 rounded-full transition-all"
+                >
+                  <Plus className="rotate-45" size={24} />
+                </button>
+                
+                <div className="absolute bottom-0 left-0 p-8 flex items-end gap-6">
+                  <div className="relative w-32 h-44 shadow-2xl rounded-lg overflow-hidden border border-white/10 hidden md:block">
+                    <Image src={showDetailModal.cover} alt={showDetailModal.name} fill className="object-cover" />
+                  </div>
+                  <div>
+                    <h2 className="text-3xl md:text-4xl font-bold mb-2">{showDetailModal.name}</h2>
+                    <div className="flex items-center gap-4">
+                      <div className="flex gap-1">
+                        {[1,2,3,4,5].map(s => (
+                          <Star 
+                            key={s} 
+                            size={20} 
+                            className={`cursor-pointer transition-colors ${s <= showDetailModal.rating ? "fill-yellow-500 text-yellow-500" : "text-gray-600 hover:text-gray-400"}`}
+                            onClick={() => setShowDetailModal({...showDetailModal, rating: s})}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-gray-400 text-sm">
+                        时长: {Math.round((showDetailModal.playtime_forever || 0) / 60)} 小时
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-8 grid md:grid-cols-2 gap-8">
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-widest">我的评价</label>
+                    <textarea 
+                      className="w-full h-40 bg-white/5 border border-white/10 rounded-xl p-4 focus:border-blue-500 outline-none transition-all resize-none"
+                      placeholder="写下你对这款游戏的看法..."
+                      value={showDetailModal.review || ""}
+                      onChange={(e) => setShowDetailModal({...showDetailModal, review: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-widest">游戏状态</label>
+                    <div className="flex gap-2">
+                      {['backlog', 'playing', 'completed', 'abandoned'].map((status) => (
+                        <button
+                          key={status}
+                          onClick={() => setShowDetailModal({...showDetailModal, status: status as any})}
+                          className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all border ${
+                            showDetailModal.status === status 
+                            ? 'bg-blue-600 border-blue-500 text-white' 
+                            : 'bg-white/5 border-white/10 text-gray-500 hover:bg-white/10'
+                          }`}
+                        >
+                          {status === 'backlog' ? '待玩' : status === 'playing' ? '在玩' : status === 'completed' ? '玩过' : '弃坑'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-sm font-bold text-gray-400 uppercase tracking-widest">游戏截图</label>
+                      <button 
+                        onClick={() => {
+                          const url = prompt("输入截图链接 (URL):");
+                          if (url) {
+                            setShowDetailModal({
+                              ...showDetailModal, 
+                              screenshots: [...(showDetailModal.screenshots || []), url]
+                            });
+                          }
+                        }}
+                        className="text-xs text-blue-400 hover:underline"
+                      >
+                        添加链接
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                      {showDetailModal.screenshots?.map((src, i) => (
+                        <div key={i} className="relative aspect-video rounded-lg overflow-hidden border border-white/10 group">
+                          <Image src={src} alt="screenshot" fill className="object-cover" />
+                          <button 
+                            onClick={() => {
+                              const newSnaps = [...(showDetailModal.screenshots || [])];
+                              newSnaps.splice(i, 1);
+                              setShowDetailModal({...showDetailModal, screenshots: newSnaps});
+                            }}
+                            className="absolute top-1 right-1 p-1 bg-red-500 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      ))}
+                      {(!showDetailModal.screenshots || showDetailModal.screenshots.length === 0) && (
+                        <div className="col-span-2 py-8 text-center bg-white/5 rounded-xl border border-dashed border-white/10 text-gray-500 text-sm">
+                          暂无截图，点击上方添加
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="pt-4 flex gap-4">
+                    <button 
+                      onClick={() => updateGame(showDetailModal)}
+                      className="flex-1 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-500/20"
+                    >
+                      保存所有更改
+                    </button>
+                    <button 
+                      onClick={() => deleteGame(showDetailModal.id)}
+                      className="px-6 py-4 bg-red-500/10 hover:bg-red-500/20 text-red-500 font-bold rounded-xl transition-all border border-red-500/20"
+                    >
+                      <Trash2 size={20} />
+                    </button>
+                  </div>
                 </div>
               </div>
             </motion.div>

@@ -3,7 +3,7 @@
 import Navbar from "@/components/Navbar";
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, User, Bot, Trash2, Settings, MessageSquare } from "lucide-react";
+import { Send, User, Bot, Trash2, MessageSquare } from "lucide-react";
 
 interface Message {
   role: 'user' | 'assistant';

@@ -11,7 +11,7 @@ export async function GET(request: Request) {
 
   try {
     const response = await fetch(
-      `http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key=${apiKey}&steamid=${steamId}&format=json&include_appinfo=true`
+      `https://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key=${apiKey}&steamid=${steamId}&format=json&include_appinfo=true`
     );
     const data = await response.json();
 

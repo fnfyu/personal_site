@@ -4,7 +4,7 @@ import Navbar from "@/components/Navbar";
 import { useState, useEffect } from "react";
 import { Game } from "@/types/game";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Filter, Plus, RefreshCw, Star, Trash2, Edit2, ExternalLink } from "lucide-react";
+import { Search, Plus, RefreshCw, Star, Trash2, Edit2, ExternalLink, Gamepad2 } from "lucide-react";
 import Image from "next/image";
 
 export default function GameLibrary() {

@@ -2,7 +2,7 @@
 
 import Navbar from "@/components/Navbar";
 import { motion } from "framer-motion";
-import { PenTool, Box, Layout, BarChart3, Mail, Code, Globe, Terminal } from "lucide-react";
+import { PenTool, Box, Layout, BarChart3, Mail, Code, Terminal } from "lucide-react";
 
 export default function Extensions() {
   const futureExtensions = [

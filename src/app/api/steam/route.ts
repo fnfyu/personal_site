@@ -4,15 +4,20 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const steamId = searchParams.get('steamId');
+  // 优先从环境变量读取，如果没有则尝试从 URL 参数读取（兼容性）
+  const steamId = process.env.STEAM_ID || searchParams.get('steamId');
   const apiKey = process.env.STEAM_API_KEY;
 
-  if (!apiKey || !steamId) {
-    console.error("Steam API call failed: Missing API Key or Steam ID in environment variables.");
-    return NextResponse.json({ error: 'Missing API Key or Steam ID' }, { status: 400 });
+  if (!apiKey) {
+    console.error("Steam API call failed: Missing STEAM_API_KEY in environment variables.");
+    return NextResponse.json({ error: 'Missing API Key' }, { status: 400 });
   }
 
-  console.log(`Attempting Steam API call for steamId: ${steamId} with key ending in ...${apiKey.slice(-4)}`);
+  if (!steamId) {
+    return NextResponse.json({ error: 'Missing Steam ID. Please set STEAM_ID in Vercel env.' }, { status: 400 });
+  }
+
+  console.log(`Attempting Steam API call for steamId: ${steamId}`);
 
   try {
     const response = await fetch(

@@ -40,41 +40,46 @@ export default function GameLibrary() {
   });
 
   const syncSteam = async () => {
-    const steamId = localStorage.getItem('steam-id');
-    if (!steamId) {
-      const id = prompt("请输入你的 Steam ID (64位):");
-      if (id) localStorage.setItem('steam-id', id);
-      else return;
-    }
-    
     setLoading(true);
     try {
-      const res = await fetch(`/api/steam?steamId=${localStorage.getItem('steam-id')}`);
+      const res = await fetch(`/api/steam`);
       const data = await res.json();
       
       if (data.games) {
-        const steamGames: Game[] = data.games.map((sg: any) => ({
-          id: `steam-${sg.appid}`,
-          appid: sg.appid,
-          name: sg.name,
-          cover: `https://cdn.akamai.steamstatic.com/steam/apps/${sg.appid}/header.jpg`,
-          playtime_forever: sg.playtime_forever,
-          status: 'backlog',
-          rating: 0,
-          tags: [],
-          notes: "",
-          platform: 'steam'
-        }));
+        const steamGames: Game[] = data.games.map((sg: any) => {
+          // 状态识别逻辑
+          let status: Game['status'] = 'backlog';
+          if (sg.playtime_2weeks > 0) {
+            status = 'playing'; // 两周内玩过，标记为正在玩
+          } else if (sg.playtime_forever > 0) {
+            status = 'completed'; // 总时长大于0但最近没玩，标记为已通关/玩过
+          }
 
-        // Merge logic: keep existing if name matches
+          return {
+            id: `steam-${sg.appid}`,
+            appid: sg.appid,
+            name: sg.name,
+            cover: `https://cdn.akamai.steamstatic.com/steam/apps/${sg.appid}/header.jpg`,
+            playtime_forever: sg.playtime_forever,
+            status: status,
+            rating: 0,
+            tags: [],
+            notes: "",
+            platform: 'steam'
+          };
+        });
+
+        // 合并逻辑：如果名称相同则保留旧的（因为旧的可能有评分和笔记）
         setGames(prev => {
           const existingNames = new Set(prev.map(g => g.name));
           const newOnes = steamGames.filter(g => !existingNames.has(g.name));
           return [...prev, ...newOnes];
         });
+      } else if (data.error) {
+        alert(`同步失败: ${data.error}\n提示：请在 Vercel 中设置 STEAM_ID 环境变量。`);
       }
     } catch (e) {
-      alert("同步失败，请检查 API 配置或 Steam ID");
+      alert("同步过程中发生未知错误，请检查网络或 API 配置");
     } finally {
       setLoading(false);
     }
